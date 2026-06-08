@@ -1,0 +1,95 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  username  String   @unique
+  password  String
+  role      String   // "Admin" | "Manager" | "Agent"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  surveys   Survey[]
+}
+
+model Template {
+  id        Int       @id @default(autoincrement())
+  name      String
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  questions Question[]
+}
+
+model Question {
+  id          Int      @id @default(autoincrement())
+  templateId  Int
+  text        String
+  category    String   // "Medical" | "Nursing" | "Hospitality" | "Security"
+  priority    Int      @default(1)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  template    Template @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  answers     Answer[]
+}
+
+model Survey {
+  id              Int      @id @default(autoincrement())
+  agentId         Int
+  agentName       String
+  patientName     String
+  medicalNumber   String
+  roomNumber      String?  @default("غير محدد")
+  phoneNumber     String
+  doctorName      String
+  enterDate       DateTime
+  interviewType   String
+  clinicType      String
+  isSatisfied     Boolean  @default(false)
+  recommend       String   // "Yes" | "No"
+  followupStatus  String?  @default("قيد العمل")
+  reminderText    String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  agent           User     @relation(fields: [agentId], references: [id])
+  answers         Answer[]
+  whatsAppLogs    WhatsAppLog[]
+}
+
+model Answer {
+  id          Int      @id @default(autoincrement())
+  surveyId    Int
+  questionId  Int
+  score       Int      // 1-5
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  survey      Survey   @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  question    Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+}
+
+model Category {
+  id           Int    @id @default(autoincrement())
+  nameEnglish  String @unique
+  nameArabic   String
+}
+
+model WhatsAppLog {
+  id            String   @id @default(cuid())
+  surveyId      Int
+  phoneNumber   String
+  message       String
+  medicalNumber String
+  doctorName    String
+  status        String   @default("مرسلة")
+  sentAt        DateTime @default(now())
+  webhookEvent  String?
+  webhookUpdatedAt DateTime?
+  webhookRawPayload String?
+  survey        Survey   @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+}

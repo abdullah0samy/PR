@@ -1,0 +1,41 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: pr-postgres
+    environment:
+      POSTGRES_USER: pr_user
+      POSTGRES_PASSWORD: pr_password
+      POSTGRES_DB: pr_survey_db
+    ports:
+      - "5442:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pr_user -d pr_survey_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  pr-system:
+    build: .
+    container_name: pr-system
+    ports:
+      - "3200:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_URL=postgresql://pr_user:pr_password@postgres:5432/pr_survey_db
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - APP_URL=${APP_URL:-http://localhost:3200}
+      - EVOLUTION_API_URL=${EVOLUTION_API_URL:-https://api.evolution.example.com/message/sendText}
+      - EVOLUTION_API_KEY=${EVOLUTION_API_KEY:-dummy_api_key}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  pgdata:
